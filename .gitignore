@@ -1,0 +1,52 @@
+# Kotlin specific
+*.iml
+*.hprof
+out/
+
+# Android/IntelliJ specific
+.gradle/
+.idea/
+build/
+captures/
+.externalNativeBuild/
+local.properties
+*.log
+
+# Generated files
+/build/
+*.apk
+*.ap_
+*.dex
+*.jar
+*.keystore
+*.so
+*.swp
+*.cxx/
+
+# Configuration files
+.DS_Store
+Thumbs.db
+
+# Others
+*.class
+*.tmp
+*.lock
+*.log
+*.orig
+*.pyc
+
+# Unit test files
+*.unitTestOut
+
+# Package files
+*.aar
+*.deb
+*.gz
+*.jar
+*.module
+*.war
+*.zip
+
+# IDE workspace
+*.vscode/
+.env

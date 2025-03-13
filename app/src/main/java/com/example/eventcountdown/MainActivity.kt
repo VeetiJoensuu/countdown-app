@@ -1,4 +1,3 @@
-
 package com.example.eventcountdown
 
 import android.os.Bundle
@@ -97,9 +96,15 @@ fun Greeting(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn {
             items(textList) { item ->
-                Text(item)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(item)
+                    Button(onClick = { textList = textList - item }) {
+                        Text("Remove")
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
+

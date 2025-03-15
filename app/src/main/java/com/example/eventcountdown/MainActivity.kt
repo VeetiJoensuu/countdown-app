@@ -1,5 +1,6 @@
 package com.example.eventcountdown
 
+import com.example.eventcountdown.ui.theme.EventCountdownTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.eventcountdown.ui.theme.EventCountdownTheme
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import java.util.*
 import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import android.content.SharedPreferences
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,10 +43,21 @@ fun Greeting(modifier: Modifier = Modifier) {
     var selectedDate by remember { mutableStateOf("") }
     var selectedTime by remember { mutableStateOf("") }
     var textList by remember { mutableStateOf(listOf<String>()) }
-    val calendar = Calendar.getInstance()
+
+    // Get SharedPreferences
     val context = LocalContext.current
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("events_prefs", Context.MODE_PRIVATE)
+
+    // Load stored events from SharedPreferences
+    LaunchedEffect(Unit) {
+        val savedEvents = sharedPreferences.getStringSet("events", setOf())?.toList() ?: emptyList()
+        textList = savedEvents
+    }
+
+    val calendar = Calendar.getInstance()
 
     Column(modifier = modifier.padding(16.dp)) {
+        // Event Name input
         Row {
             TextField(
                 value = text,
@@ -53,6 +67,8 @@ fun Greeting(modifier: Modifier = Modifier) {
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Date and Time Selection
         Row {
             Button(onClick = {
                 DatePickerDialog(
@@ -82,23 +98,37 @@ fun Greeting(modifier: Modifier = Modifier) {
                 Text(if (selectedTime.isBlank()) "Select Time" else selectedTime)
             }
         }
+
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Add Event Button
         Button(onClick = {
             if (text.isNotBlank() && selectedDate.isNotBlank() && selectedTime.isNotBlank()) {
-                textList = textList + "$text on $selectedDate at $selectedTime"
+                val event = "$text on $selectedDate at $selectedTime"
+                textList = textList + event
                 text = ""
                 selectedDate = ""
                 selectedTime = ""
+
+                // Save events to SharedPreferences
+                sharedPreferences.edit().putStringSet("events", textList.toSet()).apply()
             }
         }) {
             Text("Enter")
         }
+
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Displaying the list of events
         LazyColumn {
             items(textList) { item ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(item)
-                    Button(onClick = { textList = textList - item }) {
+                    Button(onClick = {
+                        textList = textList - item
+                        // Update SharedPreferences after removal
+                        sharedPreferences.edit().putStringSet("events", textList.toSet()).apply()
+                    }) {
                         Text("Remove")
                     }
                 }
@@ -107,4 +137,13 @@ fun Greeting(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+fun DefaultPreview() {
+    EventCountdownTheme {
+        Greeting()
+    }
+}
+
 

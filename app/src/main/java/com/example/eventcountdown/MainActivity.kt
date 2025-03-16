@@ -1,25 +1,28 @@
 package com.example.eventcountdown
 
-import com.example.eventcountdown.ui.theme.EventCountdownTheme
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
+import com.example.eventcountdown.ui.theme.EventCountdownTheme
+import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalContext
-import android.content.Context
-import android.content.SharedPreferences
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +40,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.HONEYCOMB)
 @Composable
 fun Greeting(modifier: Modifier = Modifier) {
     var text by remember { mutableStateOf("") }
@@ -44,20 +48,22 @@ fun Greeting(modifier: Modifier = Modifier) {
     var selectedTime by remember { mutableStateOf("") }
     var textList by remember { mutableStateOf(listOf<String>()) }
 
-    // Get SharedPreferences
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences = context.getSharedPreferences("events_prefs", Context.MODE_PRIVATE)
 
-    // Load stored events from SharedPreferences
     LaunchedEffect(Unit) {
-        val savedEvents = sharedPreferences.getStringSet("events", setOf())?.toList() ?: emptyList()
-        textList = savedEvents
+        try {
+            val savedEvents = sharedPreferences.getStringSet("events", null)
+            textList = savedEvents?.toList() ?: emptyList()
+            Log.d("EventCountdown", "Loaded events: $textList")
+        } catch (e: Exception) {
+            Log.e("EventCountdown", "Error loading events", e)
+        }
     }
 
     val calendar = Calendar.getInstance()
 
     Column(modifier = modifier.padding(16.dp)) {
-        // Event Name input
         Row {
             TextField(
                 value = text,
@@ -68,7 +74,6 @@ fun Greeting(modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Date and Time Selection
         Row {
             Button(onClick = {
                 DatePickerDialog(
@@ -101,17 +106,22 @@ fun Greeting(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Add Event Button
         Button(onClick = {
             if (text.isNotBlank() && selectedDate.isNotBlank() && selectedTime.isNotBlank()) {
-                val event = "$text on $selectedDate at $selectedTime"
+                val event = "$text;$selectedDate;$selectedTime"
                 textList = textList + event
                 text = ""
                 selectedDate = ""
                 selectedTime = ""
 
-                // Save events to SharedPreferences
-                sharedPreferences.edit().putStringSet("events", textList.toSet()).apply()
+                try {
+                    sharedPreferences.edit().putStringSet("events", textList.toSet()).apply()
+                    Log.d("EventCountdown", "Saved events: $textList")
+                } catch (e: Exception) {
+                    Log.e("EventCountdown", "Error saving events", e)
+                }
+            } else {
+                Log.w("EventCountdown", "Invalid event data (either text, date or time is missing)")
             }
         }) {
             Text("Enter")
@@ -119,18 +129,43 @@ fun Greeting(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Displaying the list of events
+        val sortedEvents = textList.sortedBy { event ->
+            try {
+                val parts = event.split(";")
+                if (parts.size < 3) {
+                    Log.e("EventCountdown", "Invalid event format: $event")
+                    return@sortedBy Long.MAX_VALUE
+                }
+                val dateTime = "${parts[1]} ${parts[2]}"
+                SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).parse(dateTime)?.time ?: Long.MAX_VALUE
+            } catch (e: Exception) {
+                Log.e("EventCountdown", "Error parsing event: $event", e)
+                Long.MAX_VALUE
+            }
+        }
+
         LazyColumn {
-            items(textList) { item ->
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(item)
-                    Button(onClick = {
-                        textList = textList - item
-                        // Update SharedPreferences after removal
-                        sharedPreferences.edit().putStringSet("events", textList.toSet()).apply()
-                    }) {
-                        Text("Remove")
-                    }
+            items(sortedEvents) { item ->
+                val parts = item.split(";")
+                val eventName = parts[0]
+                val eventDate = parts[1]
+                val eventTime = parts[2]
+
+                val eventDateTime = try {
+                    SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).parse("$eventDate $eventTime")
+                } catch (e: Exception) {
+                    Log.e("EventCountdown", "Error parsing event date/time", e)
+                    null
+                }
+                val remainingTime = eventDateTime?.time?.minus(System.currentTimeMillis()) ?: 0L
+
+                val days = (remainingTime / (1000 * 60 * 60 * 24)).toInt()
+                val hours = (remainingTime / (1000 * 60 * 60) % 24).toInt()
+                val minutes = (remainingTime / (1000 * 60) % 60).toInt()
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("$eventName on $eventDate at $eventTime")
+                    Text("Countdown: $days days, $hours hours, $minutes minutes remaining")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -138,12 +173,6 @@ fun Greeting(modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    EventCountdownTheme {
-        Greeting()
-    }
-}
+
 
 

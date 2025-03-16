@@ -18,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.eventcountdown.ui.theme.EventCountdownTheme
 import java.text.SimpleDateFormat
@@ -129,23 +128,34 @@ fun Greeting(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val sortedEvents = textList.sortedBy { event ->
+        val sortedAndFilteredEvents = textList.filter { event ->
+            val parts = event.split(";")
+            if (parts.size < 3) return@filter false
+
+            try {
+                val dateTime = "${parts[1]} ${parts[2]}"
+                val eventTime = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).parse(dateTime)?.time
+                    ?: return@filter false
+
+                val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
+                System.currentTimeMillis() - eventTime <= twentyFourHoursInMillis
+            } catch (e: Exception) {
+                Log.e("EventCountdown", "Error filtering events: $event", e)
+                false
+            }
+        }.sortedBy { event ->
             try {
                 val parts = event.split(";")
-                if (parts.size < 3) {
-                    Log.e("EventCountdown", "Invalid event format: $event")
-                    return@sortedBy Long.MAX_VALUE
-                }
                 val dateTime = "${parts[1]} ${parts[2]}"
                 SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).parse(dateTime)?.time ?: Long.MAX_VALUE
             } catch (e: Exception) {
-                Log.e("EventCountdown", "Error parsing event: $event", e)
+                Log.e("EventCountdown", "Error parsing event for sorting: $event", e)
                 Long.MAX_VALUE
             }
         }
 
         LazyColumn {
-            items(sortedEvents) { item ->
+            items(sortedAndFilteredEvents) { item ->
                 val parts = item.split(";")
                 val eventName = parts[0]
                 val eventDate = parts[1]
@@ -165,14 +175,16 @@ fun Greeting(modifier: Modifier = Modifier) {
 
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text("$eventName on $eventDate at $eventTime")
-                    Text("Countdown: $days days, $hours hours, $minutes minutes remaining")
+                    if (remainingTime > 0) {
+                        Text("$days days, $hours hours, $minutes minutes remaining")
+                    } else {
+                        Text("Countdown is up")
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
-
-
 
 

@@ -173,18 +173,51 @@ fun Greeting(modifier: Modifier = Modifier) {
                 val hours = (remainingTime / (1000 * 60 * 60) % 24).toInt()
                 val minutes = (remainingTime / (1000 * 60) % 60).toInt()
 
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text("$eventName on $eventDate at $eventTime")
-                    if (remainingTime > 0) {
-                        Text("$days days, $hours hours, $minutes minutes remaining")
-                    } else {
-                        Text("Countdown is up")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            "$eventName on $eventDate at $eventTime",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        if (remainingTime > 0) {
+                            Text(
+                                "$days days, $hours hours, $minutes minutes remaining",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Text("Countdown is up", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                textList = textList - item
+                                try {
+                                    sharedPreferences.edit()
+                                        .putStringSet("events", textList.toSet()).apply()
+                                    Log.d("EventCountdown", "Deleted event: $item")
+                                } catch (e: Exception) {
+                                    Log.e("EventCountdown", "Error deleting event", e)
+                                }
+                            }
+                        ) {
+                            Text("Delete")
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
+
+
 
 

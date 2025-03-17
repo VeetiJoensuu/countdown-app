@@ -194,7 +194,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         } else {
-                            Text("Countdown is up", style = MaterialTheme.typography.bodyMedium)
+                            Text("Countdown finished (deleted within 24 hours)", style = MaterialTheme.typography.bodyMedium)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
